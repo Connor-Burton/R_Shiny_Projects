@@ -1,0 +1,138 @@
+---
+title: "DOW_Forecast"
+author: "Connor Burton"
+date: ---
+output: github_document
+---
+
+```{r}
+#loading libs
+library(pacman)
+p_load(shiny, shinydashboard, tidyverse, forecast, lubridate)
+
+all_code = "#loading libs
+library(pacman)
+p_load(shiny, shinydashboard, tidyverse, forecast, lubridate)
+#data input
+df = read.csv('crypto_raw.csv')
+df$date = as.Date(df$date)
+df = df |> filter(is.na(df$djia) == FALSE)
+df = df[,2:4]
+#Dashboard input - create interface for embedded projects
+ui = dashboardPage(
+dashboardHeader(title = 'Forecasting Dashboard'),
+dashboardSidebar(sidebarMenu(
+menuItem('Dashboard', tabName = 'dashboard', icon = icon('dashboard')),
+menuItem('Code', tabName = 'code', icon = icon('th')))),
+dashboardBody(
+tabItems(
+# First tab content
+tabItem(tabName = 'dashboard',
+fluidRow(
+box(plotOutput('plot1', height = 550), title = 'Fifty-Period Forecast of User-Chosen Model'), #plotOutput = textOutput
+box(textOutput('auto_model'), title = 'Ideal Model Given Dates:'),
+box(title = 'Model Specification:', 
+sliderInput('date_slider', 'Date Range:',
+min = as_date(min(df$date)), 
+max = as_date(max(df$date)), 
+value = c(as_date(min(df$date)), as_date(max(df$date)))),
+sliderInput('ar_slider', 'Auto-Regressive Components:', min = 0, max = 5, value = 1),
+sliderInput('i_slider', 'Order of Integration:', min = 0, max = 2, value = 0),
+sliderInput('ma_slider', 'Moving Average Components:', min = 0, max = 5, value = 1)))), 
+# Second tab content
+tabItem(tabName = 'code',tabItem(tabName = 'code',fluidRow(box(textOutput('code'))))))))
+#Dashboard Output
+server = function(input, output) {
+#fill in plot of user-chosen model: 
+output$plot1 = renderPlot({
+arma_df = filter(
+df, df$date %in% c((input$date_slider[1]:input$date_slider[2])))
+arma = arima(x = arma_df$djia, order = c(input$ar_slider, input$i_slider, input$ma_slider))
+plot(forecast(arma, h=50, level = 95, fan = TRUE))})
+#fill in print of auto-chosen model
+output$auto_model = renderText({
+aa_df = filter(
+df, df$date %in% c((input$date_slider[1]:input$date_slider[2])))
+aa = auto.arima(aa_df$djia)
+aa_names = names(aa$coef)
+aa_vals = aa$coef
+aa_table = rbind(aa_names, aa_vals) 
+aa_table})
+#print raw code
+output$code = renderText({all_code})}
+#Render Dashboard
+shinyApp(ui, server)
+"
+
+#data input
+df = read.csv("crypto_raw.csv")
+df$date = as.Date(df$date)
+df = df |> filter(is.na(df$djia) == FALSE)
+df = df[,2:4]
+
+#Dashboard input - create interface for embedded projects
+ui = dashboardPage(
+  dashboardHeader(title = "Forecasting Dashboard"),
+  dashboardSidebar(sidebarMenu(
+      menuItem("Dashboard", tabName = "dashboard", icon = icon("dashboard")),
+      menuItem("Code", tabName = "code", icon = icon("th"))
+    )
+  ),
+  dashboardBody(
+    tabItems(
+      # First tab content
+      tabItem(tabName = "dashboard",
+        fluidRow(
+      box(plotOutput("plot1", height = 550), title = "Fifty-Period Forecast of User-Chosen Model"), #plotOutput = textOutput
+      box(textOutput("auto_model"), title = "Ideal Model Given Dates:"),
+      box(
+        title = "Model Specification:",
+        sliderInput("date_slider", "Date Range:", 
+                    min = as_date(min(df$date)), 
+                    max = as_date(max(df$date)), 
+                    value = c(as_date(min(df$date)), as_date(max(df$date)))),
+        sliderInput("ar_slider", "Auto-Regressive Components:", min = 0, max = 5, value = 1),
+        sliderInput("i_slider", "Order of Integration:", min = 0, max = 2, value = 0),
+        sliderInput("ma_slider", "Moving Average Components:", min = 0, max = 5, value = 1))
+      )), 
+      # Second tab content
+      tabItem(tabName = "code",
+        tabItem(tabName = "code",
+                 fluidRow(
+                   box(textOutput("code"))
+                 ))
+      )
+    )
+  )
+)
+
+#Dashboard Output
+server = function(input, output) {
+  #fill in plot of user-chosen model: 
+  output$plot1 = renderPlot({
+      arma_df = filter(
+        df, df$date %in% c((input$date_slider[1]:input$date_slider[2])))
+      arma = arima(
+        x = arma_df$djia,
+        order = c(input$ar_slider, input$i_slider, input$ma_slider))
+    plot(forecast(arma, h=50, level = 95, fan = TRUE))
+    })
+  #fill in print of auto-chosen model
+  output$auto_model = renderText({
+    aa_df = filter(
+      df, df$date %in% c((input$date_slider[1]:input$date_slider[2])))
+    aa = auto.arima(aa_df$djia)
+    aa_names = names(aa$coef)
+    aa_vals = aa$coef
+    aa_table = rbind(aa_names, aa_vals)
+    aa_table
+  })
+    #print raw code
+    output$code = renderText({all_code})
+  
+}
+
+#Render Dashboard
+shinyApp(ui, server)
+
+```
